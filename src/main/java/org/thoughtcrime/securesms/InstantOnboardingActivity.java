@@ -1,10 +1,6 @@
 package org.thoughtcrime.securesms;
 
-import static org.thoughtcrime.securesms.connect.DcHelper.CONFIG_PROXY_ENABLED;
-import static org.thoughtcrime.securesms.connect.DcHelper.CONFIG_PROXY_URL;
-
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
@@ -22,22 +18,17 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.loader.app.LoaderManager;
-import chat.delta.rpc.Rpc;
-import chat.delta.rpc.RpcException;
 import com.b44t.messenger.DcContext;
 import com.b44t.messenger.DcEvent;
-import com.b44t.messenger.DcLot;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.transition.Transition;
 import com.google.android.material.textfield.TextInputLayout;
-import com.google.zxing.integration.android.IntentIntegrator;
-import com.google.zxing.integration.android.IntentResult;
 import java.io.File;
 import java.io.IOException;
 import java.security.SecureRandom;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.thoughtcrime.securesms.components.AvatarSelector;
@@ -48,14 +39,8 @@ import org.thoughtcrime.securesms.mms.AttachmentManager;
 import org.thoughtcrime.securesms.mms.GlideApp;
 import org.thoughtcrime.securesms.permissions.Permissions;
 import org.thoughtcrime.securesms.profiles.AvatarHelper;
-import org.thoughtcrime.securesms.proxy.ProxySettingsActivity;
-import org.thoughtcrime.securesms.qr.RegistrationQrActivity;
-import org.thoughtcrime.securesms.relay.EditRelayActivity;
-import org.thoughtcrime.securesms.relay.RelayListActivity;
 import org.thoughtcrime.securesms.scribbles.ScribbleActivity;
-import org.thoughtcrime.securesms.util.IntentUtils;
 import org.thoughtcrime.securesms.util.Prefs;
-import org.thoughtcrime.securesms.util.TextUtil;
 import org.thoughtcrime.securesms.util.Util;
 import org.thoughtcrime.securesms.util.ViewUtil;
 import org.thoughtcrime.securesms.util.views.ProgressDialog;
@@ -64,10 +49,7 @@ public class InstantOnboardingActivity extends BaseActionBarActivity
     implements DcEventCenter.DcEventDelegate {
 
   private static final String TAG = "InstantOnboardingActivity";
-  private static final String DCACCOUNT = "dcaccount";
-  private static final String DCLOGIN = "dclogin";
-  private static final String INSTANCES_URL = "https://chatmail.at/relays";
-  private static final String DEFAULT_CHATMAIL_HOST = "nine.testrun.org";
+  private static final String RP_DOMAIN = "rp.local";
 
   private static final int REQUEST_CODE_AVATAR = 1;
 
@@ -80,13 +62,7 @@ public class InstantOnboardingActivity extends BaseActionBarActivity
 
   private boolean avatarChanged;
   private boolean imageLoaded;
-  private String providerHost;
-  private String providerQrData;
-  private String rawQrData;
-  private DcLot parsedQrData;
-  private boolean isDcLogin;
-  private boolean isContactInvitation;
-  private boolean isGroupInvitation;
+  private String profileName;
 
   private AttachmentManager attachmentManager;
   private Bitmap avatarBmp;
@@ -107,51 +83,22 @@ public class InstantOnboardingActivity extends BaseActionBarActivity
     boolean configured = DcHelper.getContext(this).isConfigured() == 1;
 
     if (configured) {
-      // if account is configured it means we didn't come from Welcome screen nor from QR scanner,
-      // instead, user clicked a dcaccount:// URI directly, so we need to just offer to add a new
-      // relay
-      Uri uri = getIntent().getData();
-      if (uri != null) {
-        Intent intent = new Intent(this, RelayListActivity.class);
-        intent.putExtra(RelayListActivity.EXTRA_QR_DATA, uri.toString());
-        startActivity(intent);
-      }
       finish();
       return;
     }
 
-    isDcLogin = false;
-    providerHost = DEFAULT_CHATMAIL_HOST;
-    providerQrData = DCACCOUNT + ":" + providerHost;
     attachmentManager = new AttachmentManager(this, () -> {});
     avatarChanged = false;
+    profileName = null;
     registerForEvents();
     initializeResources();
     initializeProfile();
-    handleIntent();
-    updateProvider();
-  }
-
-  @Override
-  protected void onNewIntent(Intent intent) {
-    super.onNewIntent(intent);
-    setIntent(intent);
-    handleIntent();
   }
 
   @Override
   public boolean onPrepareOptionsMenu(Menu menu) {
     menu.clear();
     getMenuInflater().inflate(R.menu.instant_onboarding_menu, menu);
-    MenuItem proxyItem = menu.findItem(R.id.menu_proxy_settings);
-    if (TextUtils.isEmpty(DcHelper.get(this, CONFIG_PROXY_URL))) {
-      proxyItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
-    } else {
-      boolean proxyEnabled = DcHelper.getInt(this, CONFIG_PROXY_ENABLED) == 1;
-      proxyItem.setIcon(
-          proxyEnabled ? R.drawable.ic_proxy_enabled_24 : R.drawable.ic_proxy_disabled_24);
-      proxyItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-    }
     return super.onPrepareOptionsMenu(menu);
   }
 
@@ -163,44 +110,12 @@ public class InstantOnboardingActivity extends BaseActionBarActivity
     if (itemId == android.R.id.home) {
       getOnBackPressedDispatcher().onBackPressed();
       return true;
-    } else if (itemId == R.id.menu_proxy_settings) {
-      startActivity(new Intent(this, ProxySettingsActivity.class));
-      return true;
     } else if (itemId == R.id.menu_view_log) {
       startActivity(new Intent(this, LogViewActivity.class));
-      return true;
-    } else if (itemId == R.id.menu_team_profile) {
-      onTeamProfileOptionSelected();
       return true;
     }
 
     return false;
-  }
-
-  private void onTeamProfileOptionSelected() {
-    final boolean isTeamProfile = dcContext.isTeamProfile();
-
-    new AlertDialog.Builder(this)
-        .setTitle(R.string.create_team_profile)
-        .setMessage(R.string.team_profile_explain)
-        .setNegativeButton(R.string.cancel, null)
-        .setPositiveButton(
-            isTeamProfile ? R.string.disable : R.string.create_team_profile,
-            (d, w) -> {
-              dcContext.setConfig("team_profile", isTeamProfile ? "0" : "1");
-              runOnUiThread(this::updateToProfileMode);
-            })
-        .show();
-  }
-
-  private void updateToProfileMode() {
-    if (dcContext != null && dcContext.isTeamProfile()) {
-      nameInputLayout.setHint(R.string.team_name);
-      getSupportActionBar().setTitle(R.string.create_team_profile);
-    } else {
-      nameInputLayout.setHint(R.string.pref_your_name);
-      getSupportActionBar().setTitle(R.string.onboarding_create_instant_account);
-    }
   }
 
   @Override
@@ -220,47 +135,6 @@ public class InstantOnboardingActivity extends BaseActionBarActivity
       case ScribbleActivity.SCRIBBLE_REQUEST_CODE:
         setAvatarView(data.getData());
         break;
-
-      case IntentIntegrator.REQUEST_CODE:
-        String qrRaw = data.getStringExtra(RegistrationQrActivity.QRDATA_EXTRA);
-        if (qrRaw == null) {
-          IntentResult scanResult = IntentIntegrator.parseActivityResult(resultCode, data);
-          qrRaw = scanResult.getContents();
-        }
-        if (qrRaw != null) {
-          setProviderFromQr(qrRaw);
-        }
-        break;
-    }
-  }
-
-  private void setProviderFromQr(String rawQr) {
-    DcLot qrParsed = dcContext.checkQr(rawQr);
-    switch (qrParsed.getState()) {
-      case DcContext.DC_QR_LOGIN:
-        isDcLogin = true; // Intentional fall-through
-      case DcContext.DC_QR_ACCOUNT:
-        providerHost = qrParsed.getText1();
-        providerQrData = rawQr;
-        updateProvider();
-        break;
-      case DcContext.DC_QR_ASK_VERIFYCONTACT:
-        isContactInvitation = true;
-        rawQrData = rawQr;
-        parsedQrData = qrParsed;
-        updateProvider();
-        break;
-      case DcContext.DC_QR_ASK_VERIFYGROUP:
-        isGroupInvitation = true;
-        rawQrData = rawQr;
-        parsedQrData = qrParsed;
-        updateProvider();
-        break;
-      default:
-        new AlertDialog.Builder(this)
-            .setMessage(R.string.qraccount_qr_code_cannot_be_used)
-            .setPositiveButton(R.string.ok, null)
-            .show();
     }
   }
 
@@ -311,17 +185,7 @@ public class InstantOnboardingActivity extends BaseActionBarActivity
     executor.shutdown();
   }
 
-  private void handleIntent() {
-    if (getIntent() != null && Intent.ACTION_VIEW.equals(getIntent().getAction())) {
-      Uri uri = getIntent().getData();
-      if (uri == null) return;
-
-      if (uri.getScheme().equalsIgnoreCase(DCACCOUNT)
-          || uri.getScheme().equalsIgnoreCase(DCLOGIN)) {
-        setProviderFromQr(uri.toString());
-      }
-    }
-  }
+  private void handleIntent() {}
 
   private void setAvatarView(Uri output) {
     GlideApp.with(this)
@@ -371,88 +235,52 @@ public class InstantOnboardingActivity extends BaseActionBarActivity
     // add padding to avoid content hidden behind system bars
     ViewUtil.applyWindowInsets(findViewById(R.id.container));
 
-    privacyPolicyBtn.setOnClickListener(
-        view -> {
-          if (!isDcLogin) {
-            IntentUtils.showInBrowser(this, "https://" + providerHost + "/privacy.html");
-          }
-        });
+    invitationText.setVisibility(View.GONE);
+    privacyPolicyBtn.setVisibility(View.GONE);
 
     signUpBtn.setOnClickListener(view -> createProfile());
-
-    Button otherOptionsBtn = findViewById(R.id.other_options_button);
-    otherOptionsBtn.setOnClickListener(view -> showOtherOptionsDialog());
   }
 
-  private void showOtherOptionsDialog() {
-    View view = View.inflate(this, R.layout.signup_options_view, null);
-    Button otherServerButton = view.findViewById(R.id.use_other_server);
-    if (otherServerButton != null) {
-      otherServerButton.setText(
-          TextUtil.markAsExternal(getString(R.string.instant_onboarding_other_server)));
+  private void createOfflineProfile() {
+    if (progressDialog != null) {
+      progressDialog.dismiss();
+      progressDialog = null;
     }
-    AlertDialog signUpDialog =
-        new AlertDialog.Builder(this)
-            .setView(view)
-            .setTitle(R.string.instant_onboarding_show_more_instances)
-            .setNegativeButton(R.string.cancel, null)
-            .create();
 
-    view.findViewById(R.id.use_other_server)
-        .setOnClickListener(
-            (v) -> {
-              IntentUtils.showInBrowser(this, INSTANCES_URL);
-              signUpDialog.dismiss();
-            });
-    view.findViewById(R.id.login_button)
-        .setOnClickListener(
-            (v) -> {
-              startActivity(new Intent(this, EditRelayActivity.class));
-              signUpDialog.dismiss();
-            });
-    view.findViewById(R.id.scan_qr_button)
-        .setOnClickListener(
-            (v) -> {
-              new IntentIntegrator(this)
-                  .setCaptureActivity(RegistrationQrActivity.class)
-                  .initiateScan();
-              signUpDialog.dismiss();
-            });
+    cancelled = false;
 
-    signUpDialog.show();
-  }
+    progressDialog = new ProgressDialog(this);
+    progressDialog.setMessage(getResources().getString(R.string.one_moment));
+    progressDialog.setCanceledOnTouchOutside(false);
+    progressDialog.setCancelable(false);
+    progressDialog.show();
 
-  private void updateProvider() {
-    if (isDcLogin) {
-      signUpBtn.setText(R.string.login_title);
-      privacyPolicyBtn.setTextColor(getResources().getColor(R.color.gray50));
-      privacyPolicyBtn.setText(getString(R.string.qrlogin_ask_login, providerHost));
-    } else {
-      signUpBtn.setText(R.string.instant_onboarding_create);
-      privacyPolicyBtn.setTextColor(getResources().getColor(R.color.delta_accent));
+    DcHelper.getEventCenter(this).captureNextError();
 
-      if (DEFAULT_CHATMAIL_HOST.equals(providerHost)) {
-        privacyPolicyBtn.setText(
-            TextUtil.markAsExternal(
-                getString(R.string.instant_onboarding_agree_default2, providerHost)));
-      } else {
-        privacyPolicyBtn.setText(
-            TextUtil.markAsExternal(
-                getString(R.string.instant_onboarding_agree_instance, providerHost)));
-      }
-
-      if (parsedQrData != null) {
-        if (isContactInvitation) {
-          String name = dcContext.getContact(parsedQrData.getId()).getDisplayName();
-          invitationText.setText(this.getString(R.string.instant_onboarding_contact_info, name));
-          invitationText.setVisibility(View.VISIBLE);
-        } else if (isGroupInvitation) {
-          String groupName = parsedQrData.getText1();
-          invitationText.setText(this.getString(R.string.instant_onboarding_group_info, groupName));
-          invitationText.setVisibility(View.VISIBLE);
-        }
-      }
-    }
+    new Thread(
+            () -> {
+              try {
+                // Buat akun offline (pseudo configured): tidak ada server, tidak ada SMTP.
+                // Cukup untuk self-chat roleplay.
+                String localName =
+                    profileName == null ? "roleplay" : profileName.trim().toLowerCase(Locale.ROOT);
+                localName = localName.replaceAll("[^a-z0-9_.-]", "");
+                if (localName.isEmpty()) {
+                  localName = "roleplay";
+                }
+                String addr = localName + "@" + RP_DOMAIN;
+                dcContext.setConfig(DcHelper.CONFIG_CONFIGURED_ADDRESS, addr);
+                dcContext.setConfig(DcHelper.CONFIG_SELF_STATUS, "Roleplay offline");
+                DcHelper.getEventCenter(this).endCaptureNextError();
+                progressSuccess();
+              } catch (Exception e) {
+                DcHelper.getEventCenter(this).endCaptureNextError();
+                if (!cancelled) {
+                  Util.runOnMain(() -> progressError(e.getMessage()));
+                }
+              }
+            })
+        .start();
   }
 
   private void initializeProfile() {
@@ -476,7 +304,8 @@ public class InstantOnboardingActivity extends BaseActionBarActivity
                 .show(this, avatar));
 
     name.setText(DcHelper.get(this, DcHelper.CONFIG_DISPLAY_NAME));
-    updateToProfileMode();
+    nameInputLayout.setHint(R.string.pref_your_name);
+    getSupportActionBar().setTitle(R.string.onboarding_create_instant_account);
   }
 
   private void registerForEvents() {
@@ -522,9 +351,6 @@ public class InstantOnboardingActivity extends BaseActionBarActivity
 
     Intent intent = new Intent(getApplicationContext(), ConversationListActivity.class);
     intent.putExtra(ConversationListActivity.FROM_WELCOME, true);
-    if (isContactInvitation || isGroupInvitation) {
-      intent.putExtra(ConversationListActivity.FROM_WELCOME_RAW_QR, rawQrData);
-    }
 
     startActivity(intent);
     finishAffinity();
@@ -536,6 +362,7 @@ public class InstantOnboardingActivity extends BaseActionBarActivity
       return;
     }
     final String name = this.name.getText().toString();
+    profileName = name;
 
     executor.execute(
         () -> {
@@ -559,53 +386,13 @@ public class InstantOnboardingActivity extends BaseActionBarActivity
               () -> {
                 if (finalResult) {
                   attachmentManager.cleanup();
-                  startQrAccountCreation(providerQrData);
+                  createOfflineProfile();
                 } else {
                   Toast.makeText(InstantOnboardingActivity.this, R.string.error, Toast.LENGTH_LONG)
                       .show();
                 }
               });
         });
-  }
-
-  private void startQrAccountCreation(String qrCode) {
-    if (progressDialog != null) {
-      progressDialog.dismiss();
-      progressDialog = null;
-    }
-
-    cancelled = false;
-
-    progressDialog = new ProgressDialog(this);
-    progressDialog.setMessage(getResources().getString(R.string.one_moment));
-    progressDialog.setCanceledOnTouchOutside(false);
-    progressDialog.setCancelable(false);
-    progressDialog.setButton(
-        DialogInterface.BUTTON_NEGATIVE,
-        getResources().getString(android.R.string.cancel),
-        (dialog, which) -> {
-          cancelled = true;
-          dcContext.stopOngoingProcess();
-        });
-    progressDialog.show();
-
-    DcHelper.getEventCenter(this).captureNextError();
-
-    new Thread(
-            () -> {
-              Rpc rpc = DcHelper.getRpc(this);
-              try {
-                rpc.addTransportFromQr(dcContext.getAccountId(), qrCode);
-                DcHelper.getEventCenter(this).endCaptureNextError();
-                progressSuccess();
-              } catch (RpcException e) {
-                DcHelper.getEventCenter(this).endCaptureNextError();
-                if (!cancelled) {
-                  Util.runOnMain(() -> progressError(e.getMessage()));
-                }
-              }
-            })
-        .start();
   }
 
   private class AvatarSelectedListener implements AvatarSelector.AttachmentClickedListener {

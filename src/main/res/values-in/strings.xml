@@ -393,6 +393,18 @@
     <string name="pref_blocked_contacts">Kontak yang diblokir</string>
     <string name="pref_who_can_see_profile_explain">Foto dan nama profil Anda akan tampak bersama dengan pesan-pesan ketika berkomunikasi dengan pengguna lain. Informasi yang telah dikirimkan tidak dapat dihapus atau dipindah.</string>
     <string name="pref_your_name">Nama Anda</string>
+    <string name="onboarding_create_instant_account">Buat Profil Baru</string>
+    <string name="instant_onboarding_create">Buat Profil</string>
+    <string name="please_enter_name">Silakan masukkan nama.</string>
+    <string name="offline_account_hint">Akun offline: kamu akan chat sendiri (self-chat roleplay) tanpa server.</string>
+    <string name="set_name_and_avatar_explain">Tulis namamu. Profil ini hanya untuk roleplay — tidak ada server, tidak ada email.</string>
+    <string name="role_toggle_self">Sebagai: Kamu</string>
+    <string name="role_toggle_character">Sebagai: %1$s</string>
+    <string name="role_toggle_pick">Tulis sebagai…</string>
+    <string name="create_character">Buat Karakter</string>
+    <string name="character_description">Deskripsi karakter</string>
+    <string name="new_character_explain">Buat karakter untuk roleplay. Karakter disimpan lokal di perangkatmu.</string>
+    <string name="character_create_error">Gagal membuat karakter. Coba lagi.</string>
     <!-- Label of the Bio/Signature/Status/Motto field -->
     <string name="pref_default_status_label">Signature text</string>
     <!-- Option name for changing behaviour of the "Enter key" to sending out a message directly (instead of adding new line). If in doubt, please refer to a similar option in other messengers. -->

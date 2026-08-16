@@ -67,6 +67,14 @@ public class ApplicationContext extends MultiDexApplication {
   private int debugOnCapabilitiesChangedCount;
   private int debugOnLinkPropertiesChangedCount;
 
+  @Override
+  protected void attachBaseContext(Context base) {
+    // Paksa bahasa Indonesia untuk aplikasi roleplay.
+    android.content.res.Configuration configuration = new android.content.res.Configuration(base.getResources().getConfiguration());
+    configuration.setLocale(new java.util.Locale("id"));
+    super.attachBaseContext(base.createConfigurationContext(configuration));
+  }
+
   public static ApplicationContext getInstance(@NonNull Context context) {
     return (ApplicationContext) context.getApplicationContext();
   }

@@ -62,8 +62,6 @@ public class NewConversationActivity extends ContactSelectionActivity {
       Intent intent = new Intent(this, GroupCreateActivity.class);
       intent.putExtra(GroupCreateActivity.CREATE_BROADCAST, true);
       startActivity(intent);
-    } else if (contactId == DcContact.DC_CONTACT_ID_QR_INVITE) {
-      new IntentIntegrator(this).setCaptureActivity(QrActivity.class).initiateScan();
     } else {
       final DcContext dcContext = DcHelper.getContext(this);
       if (dcContext.getChatIdByContactId(contactId) != 0) {

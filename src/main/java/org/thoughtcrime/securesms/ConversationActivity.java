@@ -187,6 +187,8 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   private MediaKeyboard emojiPicker;
   protected HidingLinearLayout quickAttachmentToggle;
   private InputPanel inputPanel;
+  private TextView roleToggle;
+  private String roleCharacterName;
   private @Nullable MediaController mediaController;
   private com.google.common.util.concurrent.ListenableFuture<MediaController> mediaControllerFuture;
   private AudioPlaybackViewModel playbackViewModel;
@@ -1025,6 +1027,8 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     backgroundView = ViewUtil.findById(this, R.id.conversation_background);
     messageRequestBottomView =
         ViewUtil.findById(this, R.id.conversation_activity_message_request_bottom_bar);
+    roleToggle = ViewUtil.findById(this, R.id.role_toggle);
+    roleToggle.setOnClickListener(v -> showRolePicker());
 
     ImageButton quickCameraToggle = ViewUtil.findById(this, R.id.quick_camera_toggle);
 
@@ -1084,6 +1088,47 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     initializeBackground();
   }
 
+  private void updateRoleToggle() {
+    if (dcChat.isSelfTalk()) {
+      roleToggle.setVisibility(View.VISIBLE);
+      roleToggle.setText(
+          roleCharacterName == null
+              ? getString(R.string.role_toggle_self)
+              : getString(R.string.role_toggle_character, roleCharacterName));
+    } else {
+      roleToggle.setVisibility(View.GONE);
+      roleCharacterName = null;
+    }
+  }
+
+  private void showRolePicker() {
+    DcContext dcContext = DcHelper.getContext(this);
+    final java.util.List<DcContact> characters = new java.util.ArrayList<>();
+    int[] contactIds = dcContext.getContacts(0, null);
+    for (int contactId : contactIds) {
+      DcContact c = dcContext.getContact(contactId);
+      if (CharacterCreator.isCharacter(c)) {
+        characters.add(c);
+      }
+    }
+
+    final String[] names = new String[characters.size() + 1];
+    names[0] = getString(R.string.role_toggle_self);
+    for (int i = 0; i < characters.size(); i++) {
+      names[i + 1] = characters.get(i).getDisplayName();
+    }
+
+    new AlertDialog.Builder(this)
+        .setTitle(R.string.role_toggle_pick)
+        .setItems(
+            names,
+            (dialog, which) -> {
+              roleCharacterName = which == 0 ? null : names[which];
+              updateRoleToggle();
+            })
+        .show();
+  }
+
   private void initializeBackground() {
     int accId;
     try {
@@ -1138,6 +1183,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     searchMenu = null; // reset search on new intent
     setInputPanelVisibility(true);
     initializeContactRequest();
+    updateRoleToggle();
   }
 
   private void setInputPanelVisibility(boolean isInitialization) {
@@ -1357,6 +1403,10 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
           if (quote.isPresent()) {
             if (msg == null) msg = new DcMsg(dcContext, DcMsg.DC_MSG_TEXT);
             msg.setQuote(quote.get().getQuotedMsg());
+          }
+
+          if (msg != null && roleCharacterName != null && currentChatId == this.chatId) {
+            msg.setOverrideSenderName(roleCharacterName);
           }
 
           if (action == ACTION_SEND_OUT) {

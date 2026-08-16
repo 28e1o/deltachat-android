@@ -204,12 +204,14 @@ public class DcMsg {
 
   public native String getOverrideSenderName();
 
+  public native void setOverrideSenderName(String name);
+
   public native boolean isEdited();
 
   public String getSenderName(DcContact dcContact) {
     String overrideName = getOverrideSenderName();
     if (overrideName != null) {
-      return "~" + overrideName;
+      return overrideName;
     } else {
       return dcContact.getDisplayName();
     }

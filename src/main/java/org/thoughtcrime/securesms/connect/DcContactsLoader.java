@@ -43,9 +43,6 @@ public class DcContactsLoader extends AsyncLoader<DcContactsLoader.Ret> {
 
     int[] contact_ids = dcContext.getContacts(listflags, query);
     int[] additional_items = new int[0];
-    if (query == null && addScanQRLink) {
-      additional_items = Util.appendInt(additional_items, DcContact.DC_CONTACT_ID_QR_INVITE);
-    }
     if (addCreateContactLink && dcContext.getConfigInt(DcHelper.CONFIG_FORCE_ENCRYPTION) == 0) {
       additional_items =
           Util.appendInt(additional_items, DcContact.DC_CONTACT_ID_NEW_CLASSIC_CONTACT);

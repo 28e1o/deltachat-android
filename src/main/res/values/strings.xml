@@ -665,6 +665,14 @@
     <string name="instant_onboarding_agree_instance">About profiles on %1$s</string>
     <!-- Confirmation button on the instant onboarding screen -->
     <string name="instant_onboarding_create">Agree &amp; Create Profile</string>
+    <string name="offline_account_hint">Akun offline: kamu akan chat sendiri (self-chat roleplay) tanpa server.</string>
+    <string name="role_toggle_self">Sebagai: Kamu</string>
+    <string name="role_toggle_character">Sebagai: %1$s</string>
+    <string name="role_toggle_pick">Tulis sebagai…</string>
+    <string name="create_character">Buat Karakter</string>
+    <string name="character_description">Deskripsi karakter</string>
+    <string name="new_character_explain">Buat karakter untuk roleplay. Karakter disimpan lokal di perangkatmu.</string>
+    <string name="character_create_error">Gagal membuat karakter. Coba lagi.</string>
     <!-- Secondary, link-like button to open a page with other possible instances -->
     <string name="instant_onboarding_show_more_instances">Use Other Server</string>
     <string name="instant_onboarding_other_server">List Chatmail Servers</string>
@@ -683,7 +691,8 @@
     <string name="team_name">Team Name</string>
     <string name="create_team_profile">Create Team Profile</string>
 
-    <string name="welcome_chat_over_email">Secure Decentralized Chat</string>
+    <string name="welcome_chat_over_email">Chat Roleplay</string>
+    <string name="welcome_chat_over_email_explain">Buat karakter dan chat sendiri secara offline.</string>
     <string name="scan_invitation_code">Scan Invitation Code</string>
     <string name="login_title">Log In</string>
     <string name="login_advanced_hint">This login is for advanced users.\n\nDo not use an address you\'re using in another app.</string>
@@ -1070,7 +1079,7 @@
     <string name="qrshow_join_contact_hint">Scan to chat with %1$s</string>
     <string name="qrshow_join_contact_no_connection_toast">No internet connection, can\'t perform QR code setup.</string>
     <string name="qraccount_ask_create_and_login">Create new profile on \"%1$s\" and log in there?</string>
-    <string name="set_name_and_avatar_explain">Set a name that your contacts will recognize. You can also set a profile image.</string>
+    <string name="set_name_and_avatar_explain">Tulis namamu. Profil ini hanya untuk roleplay — tidak ada server, tidak ada email.</string>
     <string name="please_enter_name">Please enter a name.</string>
     <string name="qraccount_qr_code_cannot_be_used">The scanned QR code cannot be used to set up a new profile.</string>
     <!-- the placeholder will be replaced by the address of the profile -->

@@ -337,9 +337,6 @@ public class ContactSelectionListFragment extends Fragment
       if (!isMulti() || !selectedContacts.contains(contactId)) {
         if (contactId == DcContact.DC_CONTACT_ID_NEW_CLASSIC_CONTACT) {
           Intent intent = new Intent(getContext(), NewContactActivity.class);
-          if (dcContext.mayBeValidAddr(cursorFilter)) {
-            intent.putExtra(NewContactActivity.ADDR_EXTRA, cursorFilter);
-          }
           if (isMulti()) {
             newContactLauncher.launch(intent);
           } else {

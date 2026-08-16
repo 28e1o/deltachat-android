@@ -7,6 +7,7 @@
         areas as non-bold text -->
     <color name="delta_accent">#42A5F5</color>
     <color name="delta_accent_darker">#ff2090ea</color>
+    <color name="role_chip_background">#1a42A5F5</color>
 
     <color name="primary_alpha_focus">#882090ea</color>
     <color name="primary_alpha33">#552090ea</color>

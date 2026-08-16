@@ -16,8 +16,6 @@
  */
 package org.thoughtcrime.securesms;
 
-import static org.thoughtcrime.securesms.connect.DcHelper.CONFIG_PROXY_ENABLED;
-import static org.thoughtcrime.securesms.connect.DcHelper.CONFIG_PROXY_URL;
 import static org.thoughtcrime.securesms.util.ShareUtil.acquireRelayMessageContent;
 import static org.thoughtcrime.securesms.util.ShareUtil.getDirectSharingChatId;
 import static org.thoughtcrime.securesms.util.ShareUtil.getForwardedMessageAccountId;
@@ -58,8 +56,6 @@ import com.b44t.messenger.DcAccounts;
 import com.b44t.messenger.DcContact;
 import com.b44t.messenger.DcContext;
 import com.b44t.messenger.DcMsg;
-import com.google.zxing.integration.android.IntentIntegrator;
-import com.google.zxing.integration.android.IntentResult;
 import java.util.ArrayList;
 import java.util.Date;
 import org.thoughtcrime.securesms.components.AvatarView;
@@ -71,8 +67,6 @@ import org.thoughtcrime.securesms.geolocation.LocationStreamingService;
 import org.thoughtcrime.securesms.mms.GlideApp;
 import org.thoughtcrime.securesms.permissions.Permissions;
 import org.thoughtcrime.securesms.providers.PersistentBlobProvider;
-import org.thoughtcrime.securesms.proxy.ProxySettingsActivity;
-import org.thoughtcrime.securesms.qr.QrActivity;
 import org.thoughtcrime.securesms.qr.QrCodeHandler;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.search.SearchFragment;
@@ -114,7 +108,6 @@ public class ConversationListActivity extends PassphraseRequiredActionBarActivit
   private String qrData = null;
 
   private ActivityResultLauncher<Intent> relayLockLauncher;
-  private ActivityResultLauncher<Intent> qrScannerLauncher;
 
   /**
    * used to store temporarily profile ID to delete after authorization is granted via
@@ -154,19 +147,6 @@ public class ConversationListActivity extends PassphraseRequiredActionBarActivit
                   deleteProfile(deleteProfileId);
                   deleteProfileId = 0;
                 }
-              }
-            });
-    qrScannerLauncher =
-        registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-              if (result.getResultCode() == RESULT_OK) {
-                IntentResult scanResult =
-                    IntentIntegrator.parseActivityResult(result.getResultCode(), result.getData());
-                qrData = scanResult.getContents();
-                new QrCodeHandler(this)
-                    .handleQrData(
-                        qrData, SecurejoinSource.Scan, SecurejoinUiPath.QrIcon, relayLockLauncher);
               }
             });
 
@@ -458,15 +438,6 @@ public class ConversationListActivity extends PassphraseRequiredActionBarActivit
     } else {
       inflater.inflate(R.menu.text_secure_normal, menu);
       menu.findItem(R.id.menu_global_map).setVisible(Prefs.isLocationStreamingEnabled(this));
-      MenuItem proxyItem = menu.findItem(R.id.menu_proxy_settings);
-      if (TextUtils.isEmpty(DcHelper.get(this, CONFIG_PROXY_URL))) {
-        proxyItem.setVisible(false);
-      } else {
-        boolean proxyEnabled = DcHelper.getInt(this, CONFIG_PROXY_ENABLED) == 1;
-        proxyItem.setIcon(
-            proxyEnabled ? R.drawable.ic_proxy_enabled_24 : R.drawable.ic_proxy_disabled_24);
-        proxyItem.setVisible(true);
-      }
     }
 
     super.onPrepareOptionsMenu(menu);
@@ -520,22 +491,11 @@ public class ConversationListActivity extends PassphraseRequiredActionBarActivit
     if (itemId == R.id.menu_new_chat) {
       createChat();
       return true;
-    } else if (itemId == R.id.menu_invite_friends) {
-      shareInvite();
-      return true;
     } else if (itemId == R.id.menu_settings) {
       startActivity(new Intent(this, ApplicationPreferencesActivity.class));
       return true;
-    } else if (itemId == R.id.menu_qr) {
-      Intent intent =
-          new IntentIntegrator(this).setCaptureActivity(QrActivity.class).createScanIntent();
-      qrScannerLauncher.launch(intent);
-      return true;
     } else if (itemId == R.id.menu_global_map) {
       WebxdcActivity.openMaps(this, 0);
-      return true;
-    } else if (itemId == R.id.menu_proxy_settings) {
-      startActivity(new Intent(this, ProxySettingsActivity.class));
       return true;
     } else if (itemId == android.R.id.home) {
       getOnBackPressedDispatcher().onBackPressed();
@@ -665,14 +625,6 @@ public class ConversationListActivity extends PassphraseRequiredActionBarActivit
       acquireRelayMessageContent(this, intent);
     }
     startActivity(intent);
-  }
-
-  private void shareInvite() {
-    Intent intent = new Intent(Intent.ACTION_SEND);
-    intent.setType("text/plain");
-    String inviteURL = DcHelper.getContext(this).getSecurejoinQr(0);
-    intent.putExtra(Intent.EXTRA_TEXT, getString(R.string.invite_friends_text, inviteURL));
-    startActivity(Intent.createChooser(intent, getString(R.string.chat_share_with_title)));
   }
 
   private void addDeviceMessages(boolean fromWelcome) {

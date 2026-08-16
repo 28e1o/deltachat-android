@@ -66,8 +66,8 @@
                     android:id="@+id/email_text"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/email_address"
-                    android:inputType="textEmailAddress" />
+                    android:hint="@string/character_description"
+                    android:inputType="textCapSentences" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -79,7 +79,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
-                android:text="@string/new_classic_contact_explain"
+                android:text="@string/new_character_explain"
                 android:textColor="@color/gray50" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>

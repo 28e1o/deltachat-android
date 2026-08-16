@@ -89,15 +89,16 @@
             android:layout_marginTop="20dp"
             android:text="@string/instant_onboarding_create" />
 
-        <Button
-            style="@style/ButtonSecondary"
-            android:id="@+id/other_options_button"
+        <TextView
+            android:id="@+id/offline_hint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingLeft="16dp"
-            android:paddingRight="16dp"
-            android:layout_margin="16dp"
-            android:text="@string/instant_onboarding_show_more_instances" />
+            android:layout_marginLeft="16dp"
+            android:layout_marginRight="16dp"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:text="@string/offline_account_hint"
+            android:textColor="@color/gray50" />
 
     </LinearLayout>
 

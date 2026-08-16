@@ -38,7 +38,6 @@ import org.thoughtcrime.securesms.qr.QrCodeHandler;
 import org.thoughtcrime.securesms.qr.RegistrationQrActivity;
 import org.thoughtcrime.securesms.service.GenericForegroundService;
 import org.thoughtcrime.securesms.service.NotificationController;
-import org.thoughtcrime.securesms.util.Prefs;
 import org.thoughtcrime.securesms.util.StorageUtil;
 import org.thoughtcrime.securesms.util.StreamUtil;
 import org.thoughtcrime.securesms.util.Util;
@@ -68,28 +67,9 @@ public class WelcomeActivity extends BaseActionBarActivity
     Button signUpButton = findViewById(R.id.signup_button);
     Button signInButton = findViewById(R.id.signin_button);
 
-    View view = View.inflate(this, R.layout.login_options_view, null);
-    AlertDialog signInDialog =
-        new AlertDialog.Builder(this)
-            .setView(view)
-            .setTitle(R.string.onboarding_alternative_logins)
-            .setNegativeButton(R.string.cancel, null)
-            .create();
-    view.findViewById(R.id.add_as_second_device_button)
-        .setOnClickListener(
-            (v) -> {
-              showSignInDialogWithPermission(signInDialog);
-            });
-    view.findViewById(R.id.backup_button)
-        .setOnClickListener(
-            (v) -> {
-              startImportBackup();
-              signInDialog.dismiss();
-            });
-
     signUpButton.setOnClickListener(
         (v) -> startActivity(new Intent(this, InstantOnboardingActivity.class)));
-    signInButton.setOnClickListener((v) -> signInDialog.show());
+    signInButton.setOnClickListener((v) -> startImportBackup());
 
     registerForEvents();
     initializeActionBar();
@@ -111,30 +91,6 @@ public class WelcomeActivity extends BaseActionBarActivity
             });
 
     DcHelper.maybeShowMigrationError(this);
-  }
-
-  private void showSignInDialogWithPermission(AlertDialog signInDialog) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-        && !Prefs.getBooleanPreference(this, Prefs.ASKED_FOR_NOTIFICATION_PERMISSION, false)) {
-      Prefs.setBooleanPreference(this, Prefs.ASKED_FOR_NOTIFICATION_PERMISSION, true);
-      Permissions.with(this)
-          .request(Manifest.permission.POST_NOTIFICATIONS)
-          .ifNecessary()
-          .onAllGranted(
-              () -> {
-                startAddAsSecondDeviceActivity();
-                signInDialog.dismiss();
-              })
-          .onAnyDenied(
-              () -> {
-                startAddAsSecondDeviceActivity();
-                signInDialog.dismiss();
-              })
-          .execute();
-    } else {
-      startAddAsSecondDeviceActivity();
-      signInDialog.dismiss();
-    }
   }
 
   protected void initializeActionBar() {
@@ -190,13 +146,6 @@ public class WelcomeActivity extends BaseActionBarActivity
   public void onRequestPermissionsResult(
       int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
     Permissions.onRequestPermissionsResult(this, requestCode, permissions, grantResults);
-  }
-
-  private void startAddAsSecondDeviceActivity() {
-    new IntentIntegrator(this)
-        .setCaptureActivity(RegistrationQrActivity.class)
-        .addExtra(RegistrationQrActivity.ADD_AS_SECOND_DEVICE_EXTRA, true)
-        .initiateScan();
   }
 
   @SuppressLint("InlinedApi")
